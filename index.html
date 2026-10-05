@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sensiri Chat</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #181a20;
+    --panel-2: #1f2229;
+    --border: #262a35;
+    --muted: #8a92a6;
+    --text: #e8eaf0;
+    --accent: #22d3a7;
+    --accent-2: #1aa68a;
+    --user: #1f2a3d;
+    --ai: #181a20;
+    --radius: 14px;
+  }
+  [data-theme="light"] {
+    --bg: #f5f6f8;
+    --panel: #ffffff;
+    --panel-2: #f0f1f4;
+    --border: #e6e8ee;
+    --muted: #667085;
+    --text: #1b1f2a;
+    --accent: #0fad90;
+    --accent-2: #0d8e75;
+    --user: #e8f4f1;
+    --ai: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background: var(--bg);
+    color: var(--text);
+  }
+  body {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+  }
+
+  /* Sidebar */
+  aside {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    overflow: hidden;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .brand .dot {
+    width: 26px; height: 26px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #0b1a15;
+    display: grid; place-items: center; font-weight: 800;
+  }
+  .new-chat {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .new-chat:hover { border-color: var(--accent); color: var(--accent); }
+  .history {
+    display: flex; flex-direction: column; gap: 4px;
+    overflow-y: auto; flex: 1;
+  }
+  .history-item {
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border: 1px solid transparent;
+    background: transparent;
+  }
+  .history-item:hover { background: var(--panel-2); }
+  .history-item.active { background: var(--panel-2); border-color: var(--border); }
+  .history-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    color: var(--muted); font-size: 11px; margin-top: 4px;
+  }
+  .actions {
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .actions button {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    flex: 1;
+  }
+  .actions button:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Main */
+  main {
+    display: grid;
+    grid-template-rows: 56px 1fr 78px;
+    min-width: 0;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+  header .left, header .right { display: flex; align-items: center; gap: 10px; }
+  header select, header button {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  header select:focus, header button:focus { outline: 2px solid var(--accent); }
+
+  .chat {
+    overflow-y: auto;
+    padding: 18px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .empty {
+    margin: auto;
+    text-align: center;
+    color: var(--muted);
+    max-width: 520px;
+  }
+  .empty h1 { font-size: 28px; color: var(--text); margin: 6px 0 10px; }
+  .empty p { font-size: 14px; }
+
+  .msg {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 12px;
+    max-width: 920px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  .msg .avatar {
+    width: 34px; height: 34px; border-radius: 10px;
+    display: grid; place-items: center;
+    font-weight: 700; font-size: 13px;
+    background: linear-gradient(135deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--border);
+  }
+  .msg.user .avatar { background: linear-gradient(135deg, #1b3b5c, #132a45); color: #a3c7e6; }
+  .msg.assistant .avatar { background: linear-gradient(135deg, #14433b, #0f2e29); color: #7fe3cf; }
+  .bubble {
+    background: var(--ai);
+    border: 1px solid var(--border);
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    line-height: 1.55;
+    font-size: 14.5px;
+  }
+  .msg.user .bubble { background: var(--user); }
+  .bubble p { margin: 0 0 8px; }
+  .bubble p:last-child { margin-bottom: 0; }
+  .bubble pre {
+    background: #0b0d13;
+    color: #e7e9ee;
+    padding: 12px;
+    border-radius: 10px;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+  }
+  .bubble code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    background: #0b0d13;
+    padding: 2px 6px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .bubble pre code { background: transparent; padding: 0; border: none; }
+  .bubble ul, .bubble ol { padding-left: 18px; }
+  .bubble h1, .bubble h2, .bubble h3 { margin: 8px 0 6px; }
+  .bubble a { color: var(--accent); text-decoration: none; }
+  .bubble blockquote { border-left: 3px solid var(--accent); padding-left: 10px; color: var(--muted); }
+  .bubble table { border-collapse: collapse; width: 100%; }
+  .bubble th, .bubble td { border: 1px solid var(--border); padding: 6px 8px; }
+
+  footer {
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+    padding: 10px 14px;
+  }
+  .composer {
+    max-width: 920px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: end;
+  }
+  .composer textarea {
+    width: 100%;
+    resize: none;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 14.5px;
+    min-height: 42px;
+    max-height: 160px;
+  }
+  .composer textarea:focus { outline: 2px solid var(--accent); }
+  .composer button {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #051a15;
+    border: 0;
+    padding: 10px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  .composer button:disabled { opacity: .55; cursor: not-allowed; }
+  .hint {
+    max-width: 920px;
+    margin: 4px auto 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  @media (max-width: 720px) {
+    body { grid-template-columns: 1fr; }
+    aside { display: none; }
+  }
+</style>
+</head>
+<body data-theme="dark">
+<aside>
+  <div class="brand">
+    <div class="dot">S</div>
+    <div>Sensiri Chat</div>
+  </div>
+  <button class="new-chat" id="newChat">+ Percakapan baru</button>
+  <div class="history" id="history"></div>
+  <div class="actions">
+    <button id="clear">Hapus semua</button>
+    <button id="theme">Tema: Gelap</button>
+    <button id="export">Ekspor</button>
+  </div>
+</aside>
+
+<main>
+  <header>
+    <div class="left">
+      <strong>Sensiri</strong>
+      <span style="color:var(--muted);font-size:13px;">Versi lokal</span>
+    </div>
+    <div class="right">
+      <select id="model">
+        <option>Sensiri Lite</option>
+        <option>Sensiri Pro</option>
+        <option>Sensiri Code</option>
+        <option>Sensiri Edukasi</option>
+      </select>
+      <button id="rename">Ganti judul</button>
+    </div>
+  </header>
+
+  <div class="chat" id="chat">
+    <div class="empty" id="empty">
+      <h1>Sensiri Chat</h1>
+      <p>Tanyakan apa saja. Percakapan disimpan otomatis di perangkatmu.</p>
+    </div>
+  </div>
+
+  <footer>
+    <div class="composer">
+      <textarea id="prompt" placeholder="Tulis pesan untuk Sensiri..." rows="1"></textarea>
+      <button id="send">Kirim</button>
+    </div>
+    <div class="hint">Enter untuk kirim · Shift+Enter untuk baris baru</div>
+  </footer>
+</main>
+
+<script>
+  const LS_KEY = "sensiri_data_v1";
+  const $ = (id) => document.getElementById(id);
+  const chat = $("chat");
+  const empty = $("empty");
+  const prompt = $("prompt");
+  const sendBtn = $("send");
+  const modelSel = $("model");
+  const historyList = $("history");
+  const themeBtn = $("theme");
+  const renameBtn = $("rename");
+
+  let data = load();
+  let currentId = data.lastId || null;
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY)) || { chats: {}, lastId: null }; }
+    catch { return { chats: {}, lastId: null }; }
+  }
+  function save() { localStorage.setItem(LS_KEY, JSON.stringify(data)); }
+
+  function createChat(firstMessage) {
+    const id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36);
+    const chat = {
+      id,
+      title: firstMessage.slice(0, 40).replace(/\n/g, " "),
+      model: modelSel.value,
+      createdAt: Date.now(),
+      messages: []
+    };
+    data.chats[id] = chat;
+    data.lastId = id;
+    save();
+    return id;
+  }
+  function deleteChat(id) {
+    delete data.chats[id];
+    if (data.lastId === id) data.lastId = Object.keys(data.chats).sort((a,b) => (data.chats[b]?.createdAt||0) - (data.chats[a]?.createdAt||0))[0] || null;
+    save();
+    renderHistory();
+    if (currentId && currentId === id) openChat(data.lastId);
+  }
+
+  function renderHistory() {
+    historyList.innerHTML = "";
+    const chats = Object.values(data.chats).sort((a,b) => b.createdAt - a.createdAt);
+    chats.forEach((c) => {
+      const el = document.createElement("div");
+      el.className = "history-item" + (c.id === currentId ? " active" : "");
+      const date = new Date(c.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+      el.innerHTML = `<div>${escapeHtml(c.title || "Percakapan")}</div><div class="history-meta"><span>${date} · ${c.model}</span><span>${c.messages.length} pesan</span></div>`;
+      el.onclick = () => openChat(c.id);
+      historyList.appendChild(el);
+    });
+  }
+
+  function openChat(id) {
+    currentId = id || null;
+    renderHistory();
+    renderMessages();
+    const c = data.chats[currentId];
+    if (c) modelSel.value = c.model;
+  }
+
+  function renderMessages() {
+    chat.innerHTML = "";
+    const c = data.chats[currentId];
+    if (!c || c.messages.length === 0) {
+      chat.appendChild(empty);
+      return;
+    }
+    c.messages.forEach((m) => chat.appendChild(renderBubble(m)));
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[c]);
+  }
+  function mdToHtml(s) {
+    let h = escapeHtml(s);
+    h = h.replace(/^#{1,6}\s+.+$/gm, (m) => {
+      const n = m.match(/^(#{1,6})/)[1].length;
+      const txt = m.replace(/^#{1,6}\s+/, "");
+      return `<h${n}>${txt}</h${n}>`;
+    });
+    h = h.replace(/```([\s\S]*?)```/g, (_, code) => `<pre><code>${escapeHtml(code.trim())}</code></pre>`);
+    h = h.replace(/`([^`]+)`/g, (_, code) => `<code>${escapeHtml(code)}</code>`);
+    h = h.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    h = h.replace(/\*(.+?)\*/g, "<em>$1</em>");
+    h = h.replace(/\n/g, "<br>");
+    return h;
+  }
+
+  function renderBubble(m) {
+    const div = document.createElement("div");
+    div.className = "msg " + m.role;
+    div.innerHTML = `<div class="avatar">${m.role === "user" ? "U" : "AI"}</div>
+      <div class="bubble"><p>${mdToHtml(m.content)}</p></div>`;
+    return div;
+  }
+
+  async function typeAndStream(fullText) {
+    const c = data.chats[currentId];
+    const assistantMessage = { role: "assistant", content: "" };
+    if (!c) return assistantMessage;
+    c.messages.push(assistantMessage);
+    const el = renderBubble(assistantMessage);
+    chat.appendChild(el);
+    chat.scrollTop = chat.scrollHeight;
+
+    const words = fullText.split(/(?<=\s)/);
+    for (const w of words) {
+      assistantMessage.content += w;
+      el.querySelector(".bubble").innerHTML = `<p>${mdToHtml(assistantMessage.content)}</p>`;
+      chat.scrollTop = chat.scrollHeight;
+      await new Promise((r) => setTimeout(r, 25 + Math.random() * 35));
+    }
+    save();
+    return assistantMessage;
+  }
+
+  async function generateResponse(userText, model) {
+    const lower = userText.toLowerCase();
+    const responses = {
+      "sensiri code": "Oke, saya akan bantu codingnya.\n\n```js\nfunction hello() {\n  console.log('Halo Sensiri');\n}\n```\n\nAda yang bisa saya bantu lagi?",
+      "sensiri edukasi": "Tentu! Mari kita pelajari bersama.\n\n1. Konsep dasar\n2. Contoh kasus\n3. Latihan\n\nSilakan tulis topik yang ingin kamu pelajari.",
+      "sensiri pro": "Analisis mendalam:\n\n- Poin A: relevan dengan konteks\n- Poin B: perlu verifikasi sumber\n- Poin C: implikasi jangka panjang\n\nMau saya lanjutkan ke bagian mana?",
+    };
+    if (responses[model.toLowerCase()]) return responses[model.toLowerCase()];
+    const demo = [
+      `Menurut konteksmu: "${userText.slice(0, 60)}"... ini menarik. Berikut beberapa sudut pandang:`,
+      "1) Pendekatan langsung lebih efisien untuk kasus ini.",
+      "2) Pertimbangkan juga dampak jangka panjang.",
+      "3) Jika kamu ingin, saya bisa buatkan contoh langkah demi langkah.\n\nAda preferensi format keluaranmu?",
+    ];
+    return demo.join("\n");
+  }
+
+  async function send() {
+    const text = prompt.value.trim();
+    if (!text) return;
+    sendBtn.disabled = true;
+    prompt.value = "";
+    prompt.style.height = "auto";
+
+    if (!currentId) currentId = createChat(text);
+
+    const c = data.chats[currentId];
+    c.model = modelSel.value;
+    c.messages.push({ role: "user", content: text });
+    if (c.messages.length === 1) { c.title = text.slice(0, 40).replace(/\n/g, " "); }
+    save();
+    renderMessages();
+    renderHistory();
+
+    const responseText = await generateResponse(text, modelSel.value);
+    await typeAndStream(responseText);
+    sendBtn.disabled = false;
+  }
+
+  sendBtn.onclick = send;
+  prompt.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+  prompt.addEventListener("input", () => {
+    prompt.style.height = "auto";
+    prompt.style.height = Math.min(prompt.scrollHeight, 160) + "px";
+  });
+
+  $("newChat").onclick = () => openChat(null);
+  $("clear").onclick = () => {
+    if (confirm("Hapus semua percakapan?")) { data = { chats: {}, lastId: null }; save(); openChat(null); renderHistory(); }
+  };
+  themeBtn.onclick = () => {
+    const cur = document.body.getAttribute("data-theme");
+    const next = cur === "dark" ? "light" : "dark";
+    document.body.setAttribute("data-theme", next);
+    themeBtn.textContent = "Tema: " + (next === "dark" ? "Gelap" : "Terang");
+    localStorage.setItem("sensiri_theme", next);
+  };
+  renameBtn.onclick = () => {
+    const c = data.chats[currentId];
+    if (!c) return;
+    const newTitle = prompt("Judul percakapan:", c.title);
+    if (newTitle && newTitle.trim()) { c.title = newTitle.trim(); save(); renderHistory(); }
+  };
+  $("export").onclick = () => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "sensiri-chat-" + new Date().toISOString().slice(0,10) + ".json";
+    a.click();
+  };
+
+  const savedTheme = localStorage.getItem("sensiri_theme");
+  if (savedTheme) { document.body.setAttribute("data-theme", savedTheme); themeBtn.textContent = "Tema: " + (savedTheme === "dark" ? "Gelap" : "Terang"); }
+  renderHistory();
+  if (data.lastId) openChat(data.lastId);
+</script>
+</body>
+</html>
